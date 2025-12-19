@@ -1,10 +1,11 @@
 {
-	"id": "obsidian-note-wars",
-	"name": "Obsidian Note Wars",
+	"id": "note-wars",
+	"name": "Note Wars",
 	"version": "0.1.0",
 	"minAppVersion": "1.5.0",
 	"description": "Transform your notes into a battlefield where ideas grow through challenges and progression.",
 	"author": "Abdelmalek LAHMAR",
-	"authorUrl": "https://github.com/malix213/obsidian-note-wars",
-	"fundingUrl": ""
+	"authorUrl": "malix213/obsidian-note-wars",
+	"fundingUrl": "",
+	"isDesktopOnly": true
 }
