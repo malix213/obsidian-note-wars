@@ -1,99 +1,464 @@
-import {App, Editor, MarkdownView, Modal, Notice, Plugin} from 'obsidian';
-import {DEFAULT_SETTINGS, MyPluginSettings, SampleSettingTab} from "./settings";
+import { App, Editor, MarkdownView, Modal, Notice, Plugin, PluginSettingTab, Setting, FileSystemAdapter, TFolder, TAbstractFile } from 'obsidian';
+// @ts-ignore
+import { remote } from 'electron'; // This might not be available in newer Obsidian versions standard API, checking
+import * as path from 'path';
+import { spawn } from 'child_process';
+import * as fs from 'fs';
+// @ts-ignore
+import * as process from 'process';
 
-// Remember to rename these classes and interfaces!
+// Define the plugin
+export default class IdeaEmergencePlugin extends Plugin {
 
-export default class MyPlugin extends Plugin {
-	settings: MyPluginSettings;
+	configPath: string | null = null;
 
 	async onload() {
-		await this.loadSettings();
+		// Identify config path on load
+		this.configPath = this.getObsidianConfigPath();
+		if (this.configPath) {
+			console.log(`Loading plugin. Configuration file found at: ${this.configPath}`);
+			new Notice(`Obsidian Config found: ${this.configPath}`, 5000);
+		} else {
+			console.warn("Could not find any valid obsidian.json configuration file.");
+			new Notice("Warning: Could not detect obsidian.json config file.", 5000);
+		}
 
-		// This creates an icon in the left ribbon.
-		this.addRibbonIcon('dice', 'Sample', (evt: MouseEvent) => {
-			// Called when the user clicks the icon.
-			new Notice('This is a notice!');
-		});
-
-		// This adds a status bar item to the bottom of the app. Does not work on mobile apps.
-		const statusBarItemEl = this.addStatusBarItem();
-		statusBarItemEl.setText('Status bar text');
-
-		// This adds a simple command that can be triggered anywhere
+		// Register the command
 		this.addCommand({
-			id: 'open-modal-simple',
-			name: 'Open modal (simple)',
+			id: 'open-directory-as-vault',
+			name: 'Open Directory as Vault',
 			callback: () => {
-				new SampleModal(this.app).open();
+				this.openDirectoryAsVault();
 			}
 		});
-		// This adds an editor command that can perform some operation on the current editor instance
-		this.addCommand({
-			id: 'replace-selected',
-			name: 'Replace selected content',
-			editorCallback: (editor: Editor, view: MarkdownView) => {
-				editor.replaceSelection('Sample editor command');
-			}
-		});
-		// This adds a complex command that can check whether the current state of the app allows execution of the command
-		this.addCommand({
-			id: 'open-modal-complex',
-			name: 'Open modal (complex)',
-			checkCallback: (checking: boolean) => {
-				// Conditions to check
-				const markdownView = this.app.workspace.getActiveViewOfType(MarkdownView);
-				if (markdownView) {
-					// If checking is true, we're simply "checking" if the command can be run.
-					// If checking is false, then we want to actually perform the operation.
-					if (!checking) {
-						new SampleModal(this.app).open();
-					}
 
-					// This command will only show up in Command Palette when the check function returns true
-					return true;
+		// Register event for context menu
+		this.registerEvent(
+			this.app.workspace.on("file-menu", (menu, file) => {
+				if (file instanceof TFolder) {
+					menu.addItem((item) => {
+						item
+							.setTitle("Open as Vault")
+							.setIcon("vault")
+							.onClick(async () => {
+								await this.openFolderAsVault(file);
+							});
+					});
 				}
-				return false;
+			})
+		);
+	}
+
+	getObsidianConfigPath(): string | null {
+		// Method 1: Check Environment Variables (Most Robust)
+		if (process.env.SNAP_USER_DATA) {
+			const snapConfig = path.join(process.env.SNAP_USER_DATA, '.config', 'obsidian', 'obsidian.json');
+			if (fs.existsSync(snapConfig)) return snapConfig;
+		}
+
+		// Method 2: Check XDG_CONFIG_HOME (Flatpak often uses this, or custom Linux setups)
+		if (process.env.XDG_CONFIG_HOME) {
+			const xdgConfig = path.join(process.env.XDG_CONFIG_HOME, 'obsidian', 'obsidian.json');
+			if (fs.existsSync(xdgConfig)) return xdgConfig;
+		}
+
+		const homeDir = process.env.HOME || process.env.USERPROFILE || '';
+		const possiblePaths = [
+			// Check common sandboxed locations explicitly just in case env vars are missing
+			path.join(homeDir, '.var', 'app', 'md.obsidian.Obsidian', 'config', 'obsidian', 'obsidian.json'), // Flatpak
+			path.join(homeDir, 'snap', 'obsidian', 'current', '.config', 'obsidian', 'obsidian.json'), // Snap
+			path.join(homeDir, '.config', 'obsidian', 'obsidian.json'), // Standard Linux/Mac
+			path.join(process.env.APPDATA || '', 'Obsidian', 'obsidian.json') // Windows
+		];
+
+		for (const configPath of possiblePaths) {
+			if (fs.existsSync(configPath)) {
+				return configPath;
 			}
-		});
-
-		// This adds a settings tab so the user can configure various aspects of the plugin
-		this.addSettingTab(new SampleSettingTab(this.app, this));
-
-		// If the plugin hooks up any global DOM events (on parts of the app that doesn't belong to this plugin)
-		// Using this function will automatically remove the event listener when this plugin is disabled.
-		this.registerDomEvent(document, 'click', (evt: MouseEvent) => {
-			new Notice("Click");
-		});
-
-		// When registering intervals, this function will automatically clear the interval when the plugin is disabled.
-		this.registerInterval(window.setInterval(() => console.log('setInterval'), 5 * 60 * 1000));
-
+		}
+		return null;
 	}
 
 	onunload() {
+
 	}
 
-	async loadSettings() {
-		this.settings = Object.assign({}, DEFAULT_SETTINGS, await this.loadData() as Partial<MyPluginSettings>);
+	async openDirectoryAsVault() {
+		new PathModal(this.app, (result) => {
+			if (result) {
+				this.openPath(result);
+			}
+		}).open();
 	}
 
-	async saveSettings() {
-		await this.saveData(this.settings);
+
+	async openFolderAsVault(folder: TFolder) {
+		if (!(this.app.vault.adapter instanceof FileSystemAdapter)) {
+			new Notice("This feature only works with a file system adapter.");
+			return;
+		}
+
+		// Use getFullPath API for robust absolute path retrieval
+		// @ts-ignore
+		const absolutePath = this.app.vault.adapter.getFullPath(folder.path);
+		this.openPath(absolutePath);
+	}
+
+	async openPath(absolutePath: string) {
+		// Step 1: Normalize and Prepare Path
+		const normalizedPath = absolutePath.normalize('NFC');
+		new Notice(`Processing vault: ${normalizedPath}`);
+
+		const targetConfigPath = path.join(normalizedPath, '.obsidian');
+		const isExistingVault = fs.existsSync(targetConfigPath);
+
+		if (isExistingVault) {
+			new Notice("Opening existing vault in new instance...");
+			this.spawnNewInstance(normalizedPath);
+		} else {
+			// Show plugin selection modal for new vaults
+			new PluginSelectionModal(this.app, async (selectedPlugins) => {
+				this.initializeNewVault(normalizedPath, targetConfigPath, selectedPlugins);
+			}).open();
+		}
+	}
+
+	async initializeNewVault(normalizedPath: string, targetConfigPath: string, selectedPlugins: string[]) {
+		// Step 2: Copy .obsidian directory
+		// @ts-ignore
+		const currentConfigPath = path.join(this.app.vault.adapter.getBasePath(), '.obsidian');
+		if (fs.existsSync(currentConfigPath)) {
+			new Notice("Configuring new vault...");
+			try {
+				this.copyRecursiveSync(currentConfigPath, targetConfigPath);
+
+				// Remove unselected plugins
+				const targetPluginsPath = path.join(targetConfigPath, 'plugins');
+				if (fs.existsSync(targetPluginsPath)) {
+					const installedPlugins = fs.readdirSync(targetPluginsPath);
+					for (const plugin of installedPlugins) {
+						if (!selectedPlugins.includes(plugin)) {
+							const pluginPath = path.join(targetPluginsPath, plugin);
+							// @ts-ignore
+							if (fs.rmSync) fs.rmSync(pluginPath, { recursive: true, force: true });
+							else fs.rmdirSync(pluginPath, { recursive: true }); // Fallback
+							console.log(`Removed unselected plugin: ${plugin}`);
+						}
+					}
+				}
+
+			} catch (e) {
+				console.error("Failed to copy .obsidian config or filter plugins:", e);
+				new Notice("Failed to configure plugins.");
+			}
+		}
+
+		// Step 2.1: Automatically Trust & Enable Plugins (Disable Safe Mode)
+		const targetAppJsonPath = path.join(targetConfigPath, 'app.json');
+		try {
+			let appConfig: any = {};
+			if (fs.existsSync(targetAppJsonPath)) {
+				const content = fs.readFileSync(targetAppJsonPath, 'utf8');
+				try {
+					appConfig = JSON.parse(content);
+				} catch (parseError) {
+					console.error("Failed to parse existing app.json, creating new one.", parseError);
+				}
+			}
+
+			// Disable Safe Mode to allow plugins to load
+			appConfig.safeMode = false;
+
+			fs.writeFileSync(targetAppJsonPath, JSON.stringify(appConfig, null, '\t'));
+			console.log("Safe Mode disabled in target vault.");
+		} catch (e) {
+			console.error("Failed to update app.json for Safe Mode:", e);
+		}
+
+		// Step 3: Update obsidian.json with new vault
+		this.addVaultToConfig(normalizedPath);
+
+		// Step 5: Launch new obsidian app instance with saved path
+		this.spawnNewInstance(normalizedPath);
+
+		// Step 4: Relaunch actual obsidian app (actual vault)
+		setTimeout(() => {
+			new Notice("Relaunching Obsidian...", 2000);
+			this.relaunchApp();
+		}, 1500);
+	}
+
+	spawnNewInstance(normalizedPath: string) {
+		const encodedPath = encodeURIComponent(normalizedPath);
+		const uri = `obsidian://open?path=${encodedPath}`;
+
+		try {
+			console.log(`Spawning Obsidian with URI: ${uri}`);
+			const child = spawn(process.execPath, [uri], {
+				detached: true,
+				stdio: 'ignore'
+			});
+			child.unref();
+		} catch (error) {
+			console.error("Failed to spawn Obsidian instance:", error);
+			new Notice("Failed to launch new instance.");
+		}
+	}
+
+	relaunchApp() {
+		try {
+			// @ts-ignore
+			const electron = require('electron');
+			// Check for remote (Obsidian < 1.0 or with nodeIntegration)
+			const app = electron.remote ? electron.remote.app : undefined;
+
+			if (app && app.relaunch) {
+				app.relaunch();
+				app.exit(0);
+			} else {
+				// Fallback if remote is not accessible (likely in newer Obsidian)
+				// We can trying calling the Obsidian reload command,
+				// or inform the user.
+				console.log("Electron remote not available. Falling back to reloading window.");
+				// @ts-ignore
+				this.app.commands.executeCommandById("app:reload");
+			}
+		} catch (e) {
+			console.error("Relaunch failed:", e);
+			// @ts-ignore
+			this.app.commands.executeCommandById("app:reload");
+		}
+	}
+
+	addVaultToConfig(vaultPath: string) {
+		if (!this.configPath) {
+			console.warn("No valid obsidian.json config file found earlier. Skipping config update.");
+			return;
+		}
+
+		const configPath = this.configPath;
+
+		try {
+			console.log(`Updating config at: ${configPath}`);
+			const configContent = fs.readFileSync(configPath, 'utf8');
+			const config = JSON.parse(configContent);
+
+			if (config.vaults) {
+				// Check if vault already exists
+				const existingVaultId = Object.keys(config.vaults).find(key => {
+					const v = config.vaults[key];
+					return v.path === vaultPath;
+				});
+
+				if (!existingVaultId) {
+					// Generate random ID (16 chars HEXADECIMAL)
+					const generateId = () => {
+						let result = '';
+						const characters = '0123456789abcdef';
+						for (let i = 0; i < 16; i++) {
+							result += characters.charAt(Math.floor(Math.random() * 16));
+						}
+						return result;
+					};
+					const id = generateId();
+
+					config.vaults[id] = {
+						path: vaultPath,
+						ts: Date.now(),
+						open: true
+					};
+
+					fs.writeFileSync(configPath, JSON.stringify(config, null, '\t'));
+					console.log(`Added vault to config: ${vaultPath} (ID: ${id}) at ${configPath}`);
+				} else {
+					console.log(`Vault already in config: ${vaultPath} (ID: ${existingVaultId}) at ${configPath}`);
+				}
+			}
+		} catch (e) {
+			console.log(`Error updating config at ${configPath}: ${e}`);
+		}
+	}
+
+	copyRecursiveSync(src: string, dest: string) {
+		const exists = fs.existsSync(src);
+		const stats = exists ? fs.statSync(src) : null;
+		const isDirectory = stats ? stats.isDirectory() : false;
+		if (isDirectory) {
+			if (!fs.existsSync(dest)) {
+				fs.mkdirSync(dest);
+			}
+			fs.readdirSync(src).forEach((childItemName) => {
+				this.copyRecursiveSync(path.join(src, childItemName), path.join(dest, childItemName));
+			});
+		} else {
+			fs.copyFileSync(src, dest);
+		}
 	}
 }
 
-class SampleModal extends Modal {
-	constructor(app: App) {
+class PathModal extends Modal {
+	result: string;
+	onSubmit: (result: string) => void;
+
+	constructor(app: App, onSubmit: (result: string) => void) {
 		super(app);
+		this.onSubmit = onSubmit;
 	}
 
 	onOpen() {
-		let {contentEl} = this;
-		contentEl.setText('Woah!');
+		const { contentEl } = this;
+		contentEl.createEl("h2", { text: "Enter Vault Path" });
+
+
+		let defaultPath = "";
+		if (this.app.vault.adapter instanceof FileSystemAdapter) {
+			defaultPath = this.app.vault.adapter.getBasePath();
+		}
+		this.result = defaultPath;
+
+		new Setting(contentEl)
+			.setName("Directory Path")
+			.setDesc("Absolute path to the directory you want to open as a vault.")
+			.addText((text) =>
+				text
+					.setValue(defaultPath)
+					.onChange((value) => {
+						this.result = value;
+					})
+					.inputEl.addEventListener("keydown", (e: KeyboardEvent) => {
+						if (e.key === "Enter") {
+							this.onSubmit(this.result);
+							this.close();
+						}
+					})
+			);
+
+		new Setting(contentEl)
+			.addButton((btn) =>
+				btn
+					.setButtonText("Open")
+					.setCta()
+					.onClick(() => {
+						this.onSubmit(this.result);
+						this.close();
+					}));
 	}
 
 	onClose() {
-		const {contentEl} = this;
+		const { contentEl } = this;
+		contentEl.empty();
+	}
+}
+
+class PluginSelectionModal extends Modal {
+	plugins: string[] = [];
+	selectedPlugins: Set<string> = new Set();
+	pluginToggles: any[] = [];
+	onConfirm: (selected: string[]) => void;
+
+	constructor(app: App, onConfirm: (selected: string[]) => void) {
+		super(app);
+		this.onConfirm = onConfirm;
+	}
+
+	onOpen() {
+		const { contentEl } = this;
+		contentEl.createEl("h2", { text: "Initialize New Vault" });
+
+		const warning = contentEl.createEl("div", { cls: "confirm-warning" });
+		warning.style.color = "var(--text-error)";
+		warning.style.marginBottom = "15px";
+		warning.createEl("p", { text: "This directory is not an Obsidian vault. Initializing it will:" });
+		const ul = warning.createEl("ul");
+		ul.createEl("li", { text: "Copy .obsidian config from CURRENT vault" });
+		ul.createEl("li", { text: "Relaunch Obsidian Actual vault and new vault of directory selected" });
+		ul.createEl("li", { text: "Don't forget to trust and enable plugins in new vault" });
+
+		contentEl.createEl("h3", { text: "Select Plugins to Transfer" });
+
+		// Load plugins
+		// @ts-ignore
+		const basePath = this.app.vault.adapter.getBasePath();
+		const pluginsPath = path.join(basePath, '.obsidian', 'plugins');
+		if (fs.existsSync(pluginsPath)) {
+			try {
+				this.plugins = fs.readdirSync(pluginsPath).filter(f => {
+					return fs.statSync(path.join(pluginsPath, f)).isDirectory();
+				});
+				// Default select all
+				this.plugins.forEach(p => this.selectedPlugins.add(p));
+			} catch (e) {
+				console.error("Error reading plugins:", e);
+				contentEl.createEl("p", { text: "Could not read plugins directory." });
+			}
+		}
+
+		const listContainer = contentEl.createEl("div");
+		listContainer.style.maxHeight = "300px";
+		listContainer.style.overflowY = "auto";
+		listContainer.style.marginBottom = "20px";
+		listContainer.style.border = "1px solid var(--background-modifier-border)";
+		listContainer.style.padding = "10px";
+
+		if (this.plugins.length === 0) {
+			listContainer.createEl("p", { text: "No plugins found." });
+		} else {
+			// Master Toggle
+			new Setting(listContainer)
+				.setName("Select All")
+				.setDesc("Select or deselect all plugins")
+				.addToggle(toggle => toggle
+					.setValue(true)
+					.onChange(value => {
+						this.selectedPlugins.clear();
+						if (value) {
+							this.plugins.forEach(p => this.selectedPlugins.add(p));
+						}
+						this.pluginToggles.forEach(t => t.setValue(value));
+					}));
+
+			// Individual Toggles
+			this.plugins.forEach(plugin => {
+				new Setting(listContainer)
+					.setName(plugin)
+					.addToggle(toggle => {
+						this.pluginToggles.push(toggle);
+						toggle
+							.setValue(true)
+							.onChange(value => {
+								if (value) this.selectedPlugins.add(plugin);
+								else this.selectedPlugins.delete(plugin);
+							});
+					});
+			});
+		}
+
+		const buttonContainer = contentEl.createEl("div");
+		buttonContainer.style.display = "flex";
+		buttonContainer.style.justifyContent = "flex-end";
+		buttonContainer.style.gap = "10px";
+
+		new Setting(buttonContainer)
+			.addButton((btn) =>
+				btn
+					.setButtonText("Cancel")
+					.onClick(() => {
+						this.close();
+					}));
+
+		new Setting(buttonContainer)
+			.addButton((btn) =>
+				btn
+					.setButtonText("Initialize Vault")
+					.setCta()
+					.onClick(() => {
+						this.onConfirm(Array.from(this.selectedPlugins));
+						this.close();
+					}));
+	}
+
+	onClose() {
+		const { contentEl } = this;
 		contentEl.empty();
 	}
 }

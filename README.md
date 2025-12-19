@@ -1,90 +1,123 @@
-# Obsidian Sample Plugin
+# Obsidian Note Wars
 
-This is a sample plugin for Obsidian (https://obsidian.md).
+## Overview
 
-This project uses TypeScript to provide type checking and documentation.
-The repo depends on the latest plugin API (obsidian.d.ts) in TypeScript Definition format, which contains TSDoc comments describing what it does.
+**Obsidian Note Wars** is a gamified Obsidian plugin designed to make note‑making more engaging, consistent, and rewarding. It transforms everyday actions—writing notes, creating links, organizing ideas—into playful challenges that encourage momentum and healthy habits inside your vault.
 
-This sample plugin demonstrates some of the basic functionality the plugin API can do.
-- Adds a ribbon icon, which shows a Notice when clicked.
-- Adds a command "Open modal (simple)" which opens a Modal.
-- Adds a plugin setting tab to the settings page.
-- Registers a global click event and output 'click' to the console.
-- Registers a global interval which logs 'setInterval' to the console.
+Instead of passively collecting notes, Note Wars motivates you to **show up, write, connect, and improve**—one small win at a time.
 
-## First time developing plugins?
+---
 
-Quick starting guide for new plugin devs:
+## Philosophy
 
-- Check if [someone already developed a plugin for what you want](https://obsidian.md/plugins)! There might be an existing plugin similar enough that you can partner up with.
-- Make a copy of this repo as a template with the "Use this template" button (login to GitHub if you don't see it).
-- Clone your repo to a local development folder. For convenience, you can place this folder in your `.obsidian/plugins/your-plugin-name` folder.
-- Install NodeJS, then run `npm i` in the command line under your repo folder.
-- Run `npm run dev` to compile your plugin from `main.ts` to `main.js`.
-- Make changes to `main.ts` (or create new `.ts` files). Those changes should be automatically compiled into `main.js`.
-- Reload Obsidian to load the new version of your plugin.
-- Enable plugin in settings window.
-- For updates to the Obsidian API run `npm update` in the command line under your repo folder.
+Great knowledge systems are built through *consistent action*, not perfection.
 
-## Releasing new releases
+Obsidian Note Wars applies light‑weight gamification to reinforce behaviors that lead to better thinking:
 
-- Update your `manifest.json` with your new version number, such as `1.0.1`, and the minimum Obsidian version required for your latest release.
-- Update your `versions.json` file with `"new-plugin-version": "minimum-obsidian-version"` so older versions of Obsidian can download an older version of your plugin that's compatible.
-- Create new GitHub release using your new version number as the "Tag version". Use the exact version number, don't include a prefix `v`. See here for an example: https://github.com/obsidianmd/obsidian-sample-plugin/releases
-- Upload the files `manifest.json`, `main.js`, `styles.css` as binary attachments. Note: The manifest.json file must be in two places, first the root path of your repository and also in the release.
-- Publish the release.
+* Writing instead of postponing
+* Linking instead of isolating
+* Refining instead of hoarding
 
-> You can simplify the version bump process by running `npm version patch`, `npm version minor` or `npm version major` after updating `minAppVersion` manually in `manifest.json`.
-> The command will bump version in `manifest.json` and `package.json`, and add the entry for the new version to `versions.json`
+The plugin is intentionally minimal and optional. It does **not** replace your workflow—it quietly supports it.
 
-## Adding your plugin to the community plugin list
+---
 
-- Check the [plugin guidelines](https://docs.obsidian.md/Plugins/Releasing/Plugin+guidelines).
-- Publish an initial version.
-- Make sure you have a `README.md` file in the root of your repo.
-- Make a pull request at https://github.com/obsidianmd/obsidian-releases to add your plugin.
+## Core Ideas
 
-## How to use
+### 🧠 Active Note‑Making
 
-- Clone this repo.
-- Make sure your NodeJS is at least v16 (`node --version`).
-- `npm i` or `yarn` to install dependencies.
-- `npm run dev` to start compilation in watch mode.
+Progress is driven by meaningful actions such as:
 
-## Manually installing the plugin
+* Creating notes
+* Editing and expanding content
+* Linking ideas together
 
-- Copy over `main.js`, `styles.css`, `manifest.json` to your vault `VaultFolder/.obsidian/plugins/your-plugin-id/`.
+### 🎯 Challenges, Not Pressure
 
-## Improve code quality with eslint
-- [ESLint](https://eslint.org/) is a tool that analyzes your code to quickly find problems. You can run ESLint against your plugin to find common bugs and ways to improve your code. 
-- This project already has eslint preconfigured, you can invoke a check by running`npm run lint`
-- Together with a custom eslint [plugin](https://github.com/eslint-plugin) for Obsidan specific code guidelines.
-- A GitHub action is preconfigured to automatically lint every commit on all branches.
+The plugin encourages progress through **small challenges** rather than rigid goals, helping you build sustainable habits without overwhelm.
 
-## Funding URL
+### 🏆 Gentle Progression
 
-You can include funding URLs where people who use your plugin can financially support it.
+Visual indicators and simple progression mechanics help you:
 
-The simple way is to set the `fundingUrl` field to your link in your `manifest.json` file:
+* Stay motivated
+* Notice consistency over time
+* Celebrate effort, not volume
 
-```json
-{
-    "fundingUrl": "https://buymeacoffee.com"
-}
-```
+---
 
-If you have multiple URLs, you can also do:
+## Current Features (v0.1.0)
 
-```json
-{
-    "fundingUrl": {
-        "Buy Me a Coffee": "https://buymeacoffee.com",
-        "GitHub Sponsor": "https://github.com/sponsors",
-        "Patreon": "https://www.patreon.com/"
-    }
-}
-```
+* Open any directory as an Obsidian vault without manual setup
+* Inherit existing plugins, settings, themes, and configurations from a chosen `.obsidian` folder
+* Quickly spin up temporary or experimental vaults while keeping your preferred environment
+* Fully local and privacy‑friendly (no external services)
 
-## API Documentation
+> Note: Feature depth will expand gradually while keeping the plugin focused and unobtrusive.
 
-See https://docs.obsidian.md
+---
+
+## Who This Plugin Is For
+
+Obsidian Note Wars is ideal if you:
+
+* Have unorganized notes spread across folders or directories
+* Feel chaos or inconsistency in your tagging system
+* Rarely link notes together and want a cleaner starting point
+* Want to turn messy collections into usable vaults
+* Prefer guidance and structure over heavy automation
+
+---
+
+## What This Plugin Is NOT
+
+* Not a task manager
+* Not a productivity scoreboard
+* Not a replacement for your PKM method
+
+Think of it as a **friendly companion**, not a strict coach.
+
+---
+
+## Installation
+
+1. Open **Obsidian → Settings → Community Plugins**
+2. Disable **Restricted Mode**
+3. Search for **Obsidian Note Wars**
+4. Install and enable the plugin
+
+---
+
+## Inspiration
+
+Obsidian Note Wars is inspired by the work of **Nick Milo** and the *Linking Your Thinking (LYT)* approach to personal knowledge management.
+
+Nick Milo’s ideas emphasize **active note-making, intentional linking, and sustainable thinking habits**, which strongly influence the philosophy behind this plugin.
+
+* 🌐 Linking Your Thinking: [https://www.linkingyourthinking.com/](https://www.linkingyourthinking.com/)
+* ▶️ Reference talk: [https://www.youtube.com/watch?v=qZB2Tfx-GvU](https://www.youtube.com/watch?v=qZB2Tfx-GvU)
+
+This plugin is an independent project and is **not officially affiliated** with Nick Milo, Linking Your Thinking, or Obsidian.
+
+---
+
+---
+
+## Author
+
+**Abdelmalek LAHMAR**
+
+---
+
+## Roadmap (Planned)
+
+* Expanded challenge types
+* Customizable difficulty levels
+* Optional streak tracking
+* Improved visual feedback
+
+Suggestions and feedback are welcome.
+
+---
+
+Happy writing ⚔️📓
