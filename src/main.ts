@@ -80,9 +80,10 @@ export default class IdeaEmergencePlugin extends Plugin {
         } else {
             // Show plugin selection modal for new vaults
             await new Promise<void>((resolve) => {
-                new PluginSelectionModal(this.app, async (selectedPlugins) => {
-                    await this.initializeNewVault(normalizedPath, targetConfigPath, selectedPlugins);
-                    resolve();
+                new PluginSelectionModal(this.app, (selectedPlugins) => {
+                    void this.initializeNewVault(normalizedPath, targetConfigPath, selectedPlugins).then(() => {
+                        resolve();
+                    });
                 }).open();
             });
         }
