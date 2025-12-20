@@ -8,18 +8,7 @@ import * as process from 'process';
 // Define the plugin
 export default class IdeaEmergencePlugin extends Plugin {
 
-    configPath: string | null = null;
-
     async onload() {
-        // Identify config path on load
-        this.configPath = await Promise.resolve(this.getObsidianConfigPath());
-        if (this.configPath) {
-            console.debug(`Loading plugin. Configuration file found at: ${this.configPath}`);
-            new Notice(`Obsidian Config found: ${this.configPath}`, 5000);
-        } else {
-            console.warn("Could not find any valid obsidian.json configuration file.");
-            new Notice("Could not access the Obsidian configuration directory.", 5000);
-        }
 
         // Register the command
         this.addCommand({
@@ -47,35 +36,7 @@ export default class IdeaEmergencePlugin extends Plugin {
         );
     }
 
-    getObsidianConfigPath(): string | null {
-        // Method 1: Check Environment Variables (Most Robust)
-        if (process.env.SNAP_USER_DATA) {
-            const snapConfig = path.join(process.env.SNAP_USER_DATA, '.config', 'obsidian', 'obsidian.json');
-            if (fs.existsSync(snapConfig)) return snapConfig;
-        }
 
-        // Method 2: Check XDG_CONFIG_HOME (Flatpak often uses this, or custom Linux setups)
-        if (process.env.XDG_CONFIG_HOME) {
-            const xdgConfig = path.join(process.env.XDG_CONFIG_HOME, 'obsidian', 'obsidian.json');
-            if (fs.existsSync(xdgConfig)) return xdgConfig;
-        }
-
-        const homeDir = process.env.HOME || process.env.USERPROFILE || '';
-        const possiblePaths = [
-            // Check common sandboxed locations explicitly just in case env vars are missing
-            path.join(homeDir, '.var', 'app', 'md.obsidian.Obsidian', 'config', 'obsidian', 'obsidian.json'), // Flatpak
-            path.join(homeDir, 'snap', 'obsidian', 'current', '.config', 'obsidian', 'obsidian.json'), // Snap
-            path.join(homeDir, '.config', 'obsidian', 'obsidian.json'), // Standard Linux/Mac
-            path.join(process.env.APPDATA || '', 'Obsidian', 'obsidian.json') // Windows
-        ];
-
-        for (const configPath of possiblePaths) {
-            if (fs.existsSync(configPath)) {
-                return configPath;
-            }
-        }
-        return null;
-    }
 
     onunload() {
 
@@ -179,10 +140,9 @@ export default class IdeaEmergencePlugin extends Plugin {
             console.error("Failed to update app.json for Safe Mode:", e);
         }
 
-        // Step 3: Update obsidian.json with new vault
-        await Promise.resolve(this.addVaultToConfig(normalizedPath));
 
-        // Step 5: Launch new obsidian app instance with saved path
+
+        // Step 3: Launch new obsidian app instance with saved path
         await Promise.resolve(this.spawnNewInstance(normalizedPath));
 
         // Step 4: Relaunch actual obsidian app (actual vault)
@@ -235,54 +195,7 @@ export default class IdeaEmergencePlugin extends Plugin {
         }
     }
 
-    addVaultToConfig(vaultPath: string) {
-        if (!this.configPath) {
-            console.warn("No valid obsidian.json config file found earlier. Skipping config update.");
-            return;
-        }
 
-        const configPath = this.configPath;
-
-        try {
-            console.debug(`Updating config at: ${configPath}`);
-            const configContent = fs.readFileSync(configPath, 'utf8');
-            const config = JSON.parse(configContent);
-
-            if (config.vaults) {
-                // Check if vault already exists
-                const existingVaultId = Object.keys(config.vaults).find(key => {
-                    const v = config.vaults[key];
-                    return v.path === vaultPath;
-                });
-
-                if (!existingVaultId) {
-                    // Generate random ID (16 chars HEXADECIMAL)
-                    const generateId = () => {
-                        let result = '';
-                        const characters = '0123456789abcdef';
-                        for (let i = 0; i < 16; i++) {
-                            result += characters.charAt(Math.floor(Math.random() * 16));
-                        }
-                        return result;
-                    };
-                    const id = generateId();
-
-                    config.vaults[id] = {
-                        path: vaultPath,
-                        ts: Date.now(),
-                        open: true
-                    };
-
-                    fs.writeFileSync(configPath, JSON.stringify(config, null, '\t'));
-                    console.debug(`Added vault to config: ${vaultPath} (ID: ${id}) at ${configPath}`);
-                } else {
-                    console.debug(`Vault already in config: ${vaultPath} (ID: ${existingVaultId}) at ${configPath}`);
-                }
-            }
-        } catch (e) {
-            console.error(`Error updating config at ${configPath}:`, e);
-        }
-    }
 
     copyRecursiveSync(src: string, dest: string) {
         const exists = fs.existsSync(src);
