@@ -8,7 +8,7 @@ import * as process from 'process';
 // Define the plugin
 export default class IdeaEmergencePlugin extends Plugin {
 
-    async onload() {
+    onload() {
 
         // Register the command
         this.addCommand({
