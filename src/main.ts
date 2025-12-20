@@ -18,7 +18,7 @@ export default class IdeaEmergencePlugin extends Plugin {
             new Notice(`Obsidian Config found: ${this.configPath}`, 5000);
         } else {
             console.warn("Could not find any valid obsidian.json configuration file.");
-            new Notice("Could not detect the obsidian.json config file.", 5000);
+            new Notice("Could not access the Obsidian configuration directory.", 5000);
         }
 
         // Register the command
