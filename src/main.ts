@@ -38,8 +38,8 @@ export default class IdeaEmergencePlugin extends Plugin {
                         item
                             .setTitle("Open as vault")
                             .setIcon("vault")
-                            .onClick(async () => {
-                                await this.openFolderAsVault(file);
+                            .onClick(() => {
+                                void this.openFolderAsVault(file);
                             });
                     });
                 }
@@ -375,10 +375,10 @@ class PluginSelectionModal extends Modal {
             "color": "var(--text-error)",
             "margin-bottom": "15px"
         });
-        warning.createEl("p", { text: "This directory is not an Obsidian vault. Initializing it will:" });
+        warning.createEl("p", { text: "This directory is not an obsidian vault. Initializing it will:" });
         const ul = warning.createEl("ul");
         ul.createEl("li", { text: "Copy config from current vault" });
-        ul.createEl("li", { text: "Relaunch Obsidian actual vault and new vault of directory selected" });
+        ul.createEl("li", { text: "Relaunch obsidian actual vault and new vault of directory selected" });
         ul.createEl("li", { text: "Don't forget to trust and enable plugins in new vault" });
 
         contentEl.createEl("h3", { text: "Select plugins to transfer" });
