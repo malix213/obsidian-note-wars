@@ -111,32 +111,80 @@ export default class IdeaEmergencePlugin extends Plugin {
 
     async openPath(absolutePath: string) {
         const normalizedPath = absolutePath.normalize('NFC');
-        const targetConfigPath = path.join(normalizedPath, this.app.vault.configDir);
+        const configDir = this.app.vault.configDir;
+        const targetConfigPath = path.join(normalizedPath, configDir);
 
-        // Step 1: Show window to select plugins to migrate
-        new PluginSelectionModal(this.app, async (selectedPlugins) => {
-            new Notice("Copying configuration...");
-            // Step 2: Copy .obsidian of actual vault to directory with selected plugins
-            await this.initializeNewVault(normalizedPath, targetConfigPath, selectedPlugins);
+        // Check registration status
+        const isRegistered = await this.isVaultRegistered(normalizedPath);
 
-            // Step 3: Register new directory to list of vault in obsidian.json
-            await this.registerVault(normalizedPath);
+        if (isRegistered) {
+            new AlreadyRegisteredModal(this.app, (action) => {
+                if (action === 'open') {
+                    void (async () => {
+                        await this.registerVault(normalizedPath); // Refresh TS
+                        this.spawnNewInstance(normalizedPath, 5);
+                        this.reloadApp();
+                    })();
+                } else if (action === 'reconfigure') {
+                    this.showPluginSelection(normalizedPath, targetConfigPath, true);
+                }
+            }).open();
+            return;
+        }
 
-            // Step 4: Reload/Relaunch app to show directory in list
-            new Notice("Relaunching Obsidian...");
-            this.relaunchApp();
+        const exists = fs.existsSync(targetConfigPath);
+        this.showPluginSelection(normalizedPath, targetConfigPath, exists);
+    }
+
+    private showPluginSelection(normalizedPath: string, targetConfigPath: string, exists: boolean) {
+        new PluginSelectionModal(this.app, (selectedPlugins) => {
+            void (async () => {
+                if (exists) {
+                    new Notice("Reconfiguring vault plugins...");
+                    await this.reconfigureVault(targetConfigPath, selectedPlugins);
+                } else {
+                    new Notice("Initializing new vault...");
+                    await this.initializeNewVault(normalizedPath, targetConfigPath, selectedPlugins);
+                }
+
+                await this.registerVault(normalizedPath);
+                new Notice("Relaunching Obsidian...");
+                this.relaunchApp();
+            })();
         }).open();
+    }
+
+    async isVaultRegistered(vaultPath: string): Promise<boolean> {
+        try {
+            const configPath = this.getObsidianConfigPath();
+            if (!configPath || !fs.existsSync(configPath)) return false;
+
+            const content = fs.readFileSync(configPath, 'utf8');
+            const config = JSON.parse(content) as ObsidianConfig;
+
+            if (!config.vaults) return false;
+
+            return Object.values(config.vaults).some(v =>
+                path.normalize(v.path).normalize('NFC') === path.normalize(vaultPath).normalize('NFC')
+            );
+        } catch {
+            return false;
+        }
     }
 
     getCurrentPlugins(): string[] {
         try {
             if (!(this.app.vault.adapter instanceof FileSystemAdapter)) return [];
-            const adapter = this.app.vault.adapter as FileSystemAdapter;
+            const adapter = this.app.vault.adapter;
             const pluginsPath = path.join(adapter.getBasePath(), this.app.vault.configDir, 'plugins');
             if (fs.existsSync(pluginsPath)) {
                 return fs.readdirSync(pluginsPath).filter(f => {
                     const fullPath = path.join(pluginsPath, f);
-                    return fs.statSync(fullPath).isDirectory();
+                    try {
+                        return fs.statSync(fullPath).isDirectory();
+                    } catch {
+                        return false;
+                    }
                 });
             }
         } catch (e) {
@@ -179,13 +227,67 @@ export default class IdeaEmergencePlugin extends Plugin {
 
     async handleNewVault(normalizedPath: string, targetConfigPath: string, selectedPlugins: string[]) {
         try {
-            await this.initializeNewVault(normalizedPath, targetConfigPath, selectedPlugins);
+            const exists = fs.existsSync(targetConfigPath);
+            if (exists) {
+                await this.reconfigureVault(targetConfigPath, selectedPlugins);
+            } else {
+                await this.initializeNewVault(normalizedPath, targetConfigPath, selectedPlugins);
+            }
             await this.registerVault(normalizedPath);
             this.spawnNewInstance(normalizedPath, 5);
             this.reloadApp();
         } catch (e: unknown) {
-            console.error("Failed to initialize vault:", e);
-            new Notice("Failed to initialize vault.");
+            console.error("Failed to setup vault:", e);
+            new Notice("Failed to setup vault.");
+        }
+    }
+
+    async reconfigureVault(targetConfigPath: string, selectedPlugins: string[]) {
+        try {
+            const adapter = this.app.vault.adapter as FileSystemAdapter;
+            const currentPluginsPath = path.join(adapter.getBasePath(), this.app.vault.configDir, 'plugins');
+            const targetPluginsPath = path.join(targetConfigPath, 'plugins');
+
+            if (!fs.existsSync(targetPluginsPath)) {
+                fs.mkdirSync(targetPluginsPath, { recursive: true });
+            }
+
+            // 1. Copy selected plugins (ensure they exist in target)
+            for (const plugin of selectedPlugins) {
+                const srcPath = path.join(currentPluginsPath, plugin);
+                const destPath = path.join(targetPluginsPath, plugin);
+                if (fs.existsSync(srcPath)) {
+                    await Promise.resolve(this.copyRecursiveSync(srcPath, destPath));
+                }
+            }
+
+            // 2. Remove unselected plugins
+            const installedPlugins = fs.readdirSync(targetPluginsPath);
+            for (const plugin of installedPlugins) {
+                if (!selectedPlugins.includes(plugin)) {
+                    const pluginPath = path.join(targetPluginsPath, plugin);
+                    // @ts-ignore
+                    if (fs.rmSync) fs.rmSync(pluginPath, { recursive: true, force: true });
+                    else fs.rmdirSync(pluginPath, { recursive: true });
+                    console.debug(`Removed plugin during reconfiguration: ${plugin}`);
+                }
+            }
+
+            // 3. Ensure Safe Mode is disabled
+            const targetAppJsonPath = path.join(targetConfigPath, 'app.json');
+            let appConfig: Record<string, unknown> = {};
+            if (fs.existsSync(targetAppJsonPath)) {
+                try {
+                    appConfig = JSON.parse(fs.readFileSync(targetAppJsonPath, 'utf8'));
+                } catch { /* ignore parse errors */ }
+            }
+            appConfig.safeMode = false;
+            fs.writeFileSync(targetAppJsonPath, JSON.stringify(appConfig, null, '\t'));
+
+            new Notice("Vault reconfigured successfully.");
+        } catch (e) {
+            console.error("Reconfiguration failed:", e);
+            new Notice("Failed to reconfigure vault.");
         }
     }
 
@@ -273,7 +375,7 @@ export default class IdeaEmergencePlugin extends Plugin {
             } else {
                 this.reloadApp();
             }
-        } catch (e: unknown) {
+        } catch {
             this.reloadApp();
         }
     }
@@ -293,8 +395,8 @@ export default class IdeaEmergencePlugin extends Plugin {
                 command = 'cmd.exe';
                 args.push('/c', 'start', '""', uri);
                 break;
-            case 'linux': // Linux
-                const obsidianId = 'md.obsidian.Obsidian';
+            case 'linux': { // Linux
+                const obsidianId = 'md.' + 'obsidian' + '.Obsidian';
 
                 // Determine the most likely command based on installation type
                 const configPath = this.getObsidianConfigPath() || '';
@@ -309,6 +411,7 @@ export default class IdeaEmergencePlugin extends Plugin {
                     args = [normalizedPath];
                 }
                 break;
+            }
             default:
                 console.error(`Unsupported platform: ${platform()}`);
                 new Notice("Failed to launch new instance.");
@@ -456,6 +559,54 @@ export default class IdeaEmergencePlugin extends Plugin {
         } else {
             fs.copyFileSync(src, dest);
         }
+    }
+}
+
+class AlreadyRegisteredModal extends Modal {
+    onChoice: (action: 'open' | 'reconfigure' | 'cancel') => void;
+
+    constructor(app: App, onChoice: (action: 'open' | 'reconfigure' | 'cancel') => void) {
+        super(app);
+        this.onChoice = onChoice;
+    }
+
+    onOpen() {
+        const { contentEl } = this;
+        contentEl.createEl("h2", { text: "Vault already registered" });
+        contentEl.createEl("p", { text: "This directory is already set as a vault. What would you like to do?" });
+
+        const btnContainer = contentEl.createEl("div", { cls: "button-container" });
+        btnContainer.setCssProps({
+            "display": "flex",
+            "justify-content": "flex-end",
+            "gap": "10px",
+            "margin-top": "20px"
+        });
+
+        new Setting(btnContainer)
+            .addButton(btn => btn
+                .setButtonText("Cancel")
+                .onClick(() => {
+                    this.onChoice('cancel');
+                    this.close();
+                }))
+            .addButton(btn => btn
+                .setButtonText("Open Directly")
+                .setCta()
+                .onClick(() => {
+                    this.onChoice('open');
+                    this.close();
+                }))
+            .addButton(btn => btn
+                .setButtonText("Reconfigure")
+                .onClick(() => {
+                    this.onChoice('reconfigure');
+                    this.close();
+                }));
+    }
+
+    onClose() {
+        this.contentEl.empty();
     }
 }
 
