@@ -278,7 +278,7 @@ export default class IdeaEmergencePlugin extends Plugin {
             let appConfig: Record<string, unknown> = {};
             if (fs.existsSync(targetAppJsonPath)) {
                 try {
-                    appConfig = JSON.parse(fs.readFileSync(targetAppJsonPath, 'utf8'));
+                    appConfig = JSON.parse(fs.readFileSync(targetAppJsonPath, 'utf8')) as Record<string, unknown>;
                 } catch { /* ignore parse errors */ }
             }
             appConfig.safeMode = false;
@@ -591,7 +591,7 @@ class AlreadyRegisteredModal extends Modal {
                     this.close();
                 }))
             .addButton(btn => btn
-                .setButtonText("Open Directly")
+                .setButtonText("Open directly")
                 .setCta()
                 .onClick(() => {
                     this.onChoice('open');
