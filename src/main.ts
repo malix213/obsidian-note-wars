@@ -115,13 +115,13 @@ export default class IdeaEmergencePlugin extends Plugin {
         const targetConfigPath = path.join(normalizedPath, configDir);
 
         // Check registration status
-        const isRegistered = await this.isVaultRegistered(normalizedPath);
+        const isRegistered = this.isVaultRegistered(normalizedPath);
 
         if (isRegistered) {
             new AlreadyRegisteredModal(this.app, (action) => {
                 if (action === 'open') {
                     void (async () => {
-                        await this.registerVault(normalizedPath); // Refresh TS
+                        this.registerVault(normalizedPath); // Refresh TS
                         this.spawnNewInstance(normalizedPath, 5);
                         this.reloadApp();
                     })();
@@ -147,14 +147,14 @@ export default class IdeaEmergencePlugin extends Plugin {
                     await this.initializeNewVault(normalizedPath, targetConfigPath, selectedPlugins);
                 }
 
-                await this.registerVault(normalizedPath);
+                this.registerVault(normalizedPath);
                 new Notice("Relaunching Obsidian...");
                 this.relaunchApp();
             })();
         }).open();
     }
 
-    async isVaultRegistered(vaultPath: string): Promise<boolean> {
+    isVaultRegistered(vaultPath: string): boolean {
         try {
             const configPath = this.getObsidianConfigPath();
             if (!configPath || !fs.existsSync(configPath)) return false;
@@ -193,7 +193,7 @@ export default class IdeaEmergencePlugin extends Plugin {
         return [];
     }
 
-    async checkRegistrationStatus() {
+    checkRegistrationStatus() {
         const configPath = this.getObsidianConfigPath();
         if (!configPath) {
             new Notice("Could not detect Obsidian configuration path");
@@ -233,7 +233,7 @@ export default class IdeaEmergencePlugin extends Plugin {
             } else {
                 await this.initializeNewVault(normalizedPath, targetConfigPath, selectedPlugins);
             }
-            await this.registerVault(normalizedPath);
+            this.registerVault(normalizedPath);
             this.spawnNewInstance(normalizedPath, 5);
             this.reloadApp();
         } catch (e: unknown) {
@@ -457,7 +457,7 @@ export default class IdeaEmergencePlugin extends Plugin {
         }
     }
 
-    async registerVault(vaultPath: string) {
+    registerVault(vaultPath: string) {
         try {
             const configPath = this.getObsidianConfigPath();
             if (!configPath || !fs.existsSync(configPath)) {
