@@ -97,7 +97,7 @@ export default class IdeaEmergencePlugin extends Plugin {
     }
 
 
-    async openFolderAsVault(folder: TFolder) {
+    openFolderAsVault(folder: TFolder) {
         if (!(this.app.vault.adapter instanceof FileSystemAdapter)) {
             new Notice("This feature only works with a file system adapter.");
             return;
@@ -106,10 +106,10 @@ export default class IdeaEmergencePlugin extends Plugin {
         // Use getFullPath API for robust absolute path retrieval
         // @ts-ignore
         const absolutePath = this.app.vault.adapter.getFullPath(folder.path);
-        await this.openPath(absolutePath);
+        this.openPath(absolutePath);
     }
 
-    async openPath(absolutePath: string) {
+    openPath(absolutePath: string) {
         const normalizedPath = absolutePath.normalize('NFC');
         const configDir = this.app.vault.configDir;
         const targetConfigPath = path.join(normalizedPath, configDir);
@@ -120,11 +120,9 @@ export default class IdeaEmergencePlugin extends Plugin {
         if (isRegistered) {
             new AlreadyRegisteredModal(this.app, (action) => {
                 if (action === 'open') {
-                    void (async () => {
-                        this.registerVault(normalizedPath); // Refresh TS
-                        this.spawnNewInstance(normalizedPath, 5);
-                        this.reloadApp();
-                    })();
+                    this.registerVault(normalizedPath); // Refresh TS
+                    this.spawnNewInstance(normalizedPath, 5);
+                    this.reloadApp();
                 } else if (action === 'reconfigure') {
                     this.showPluginSelection(normalizedPath, targetConfigPath, true);
                 }
