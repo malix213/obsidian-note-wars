@@ -88,6 +88,16 @@ Think of it as a **friendly companion**, not a strict coach.
 
 ---
 
+## Suggested Plugins for Best Workflow
+
+To get the most out of Obsidian Note Wars and your personal knowledge management, we recommend the following community plugins:
+
+- **Excalidraw**: To illustrate ideas and create visual sketches within your vault.
+- **Dataview**: To manage and query markdown attributes, making your metadata actionable.
+- **Subdivider**: To divide large markdown files into atomic ideas, helping you maintain a granular and linked note system.
+
+---
+
 ## Inspiration
 
 Obsidian Note Wars is inspired by the work of **Nick Milo** and the *Linking Your Thinking (LYT)* approach to personal knowledge management.

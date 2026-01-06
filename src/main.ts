@@ -6,6 +6,9 @@ import * as fs from 'fs';
 import * as process from 'process';
 import { platform } from 'os';
 import * as crypto from 'crypto';
+import { SubdividerSettingTab, DEFAULT_SETTINGS as DEFAULT_SUBDIVIDER_SETTINGS, type SubdividerSettings } from './subdivider/settings';
+import { handle_selection, handle_file } from './subdivider/handles';
+import { Menu, MenuItem, TFile } from 'obsidian';
 
 interface ExtendedApp extends App {
     commands: {
@@ -22,6 +25,13 @@ interface VaultEntry {
 interface ObsidianConfig {
     vaults: Record<string, VaultEntry>;
 }
+
+interface IdeaEmergenceSettings extends SubdividerSettings {
+}
+
+const DEFAULT_SETTINGS: IdeaEmergenceSettings = {
+    ...DEFAULT_SUBDIVIDER_SETTINGS
+};
 
 interface ElectronApp {
     relaunch(): void;
@@ -42,8 +52,11 @@ interface WindowWithInternal extends Window {
 
 // Define the plugin
 export default class IdeaEmergencePlugin extends Plugin {
+    settings: IdeaEmergenceSettings;
 
-    onload() {
+    async onload() {
+        await this.loadSettings();
+
         // Register the main command
         this.addCommand({
             id: 'open-directory-as-vault',
@@ -62,6 +75,24 @@ export default class IdeaEmergencePlugin extends Plugin {
             }
         });
 
+        // Register editor-menu event for subdivision
+        this.registerEvent(
+            this.app.workspace.on("editor-menu", (menu) => {
+                menu.addSeparator();
+                menu.addItem(item => {
+                    item
+                        .setTitle("Subdivide the selection")
+                        .setIcon("blocks")
+                        .onClick(async () => {
+                            const selectedText = this.app.workspace.activeEditor?.editor?.getSelection();
+                            if (selectedText) {
+                                await handle_selection(this, selectedText);
+                            }
+                        });
+                });
+            })
+        );
+
         // Register event for context menu
         this.registerEvent(
             this.app.workspace.on("file-menu", (menu, file) => {
@@ -75,14 +106,34 @@ export default class IdeaEmergencePlugin extends Plugin {
                             });
                     });
                 }
+                if (file instanceof TFile) {
+                    menu.addItem((item) => {
+                        item
+                            .setTitle("Subdivide the file")
+                            .setIcon("blocks")
+                            .onClick(async () => {
+                                await handle_file(this, file, 1, this.settings.delete, false, true);
+                            });
+                    });
+                }
             })
         );
+
+        this.addSettingTab(new SubdividerSettingTab(this.app, this));
     }
 
 
 
     onunload() {
 
+    }
+
+    async loadSettings() {
+        this.settings = Object.assign({}, DEFAULT_SETTINGS, await this.loadData());
+    }
+
+    async saveSettings() {
+        await this.saveData(this.settings);
     }
 
     async openDirectoryAsVault() {
