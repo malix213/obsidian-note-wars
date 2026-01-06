@@ -1,7 +1,7 @@
 {
 	"id": "note-wars",
 	"name": "Note Wars",
-	"version": "0.2.1",
+	"version": "0.3.0",
 	"minAppVersion": "1.5.0",
 	"description": "Transform your notes into a battlefield where ideas grow through challenges and progression.",
 	"author": "Abdelmalek LAHMAR",
