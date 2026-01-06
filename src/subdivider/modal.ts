@@ -84,11 +84,11 @@ export class OverrideModal extends Modal {
             cls: "mod-warning",
             text: "Override",
         })
-        discard.addEventListener("click", async () => {
+        discard.addEventListener("click", () => {
             if (this.resolve) this.resolve(true)
             this.close()
         })
-        discard.addEventListener("keypress", async () => {
+        discard.addEventListener("keypress", () => {
             if (this.resolve) this.resolve(true)
             this.close()
         })
@@ -153,50 +153,58 @@ export class HeadersModal extends Modal {
         this.originalHeaders.forEach((header, index) => {
             const proposed = this.proposedHeaders[index]
             const item = this.listEl.createEl("li")
-            item.style.marginBottom = "12px"
-            item.style.listStyle = "none"
-            item.style.borderBottom = "1px solid var(--background-modifier-border)"
-            item.style.paddingBottom = "8px"
+            item.setCssProps({
+                "margin-bottom": "12px",
+                "list-style": "none",
+                "border-bottom": "1px solid var(--background-modifier-border)",
+                "padding-bottom": "8px"
+            })
 
             const originalDiv = item.createDiv({ cls: "header-original" })
             originalDiv.setText(`Original: ${header}`)
-            originalDiv.style.fontSize = "0.8em"
-            originalDiv.style.color = "var(--text-muted)"
-            originalDiv.style.marginBottom = "4px"
+            originalDiv.setCssProps({
+                "font-size": "0.8em",
+                "color": "var(--text-muted)",
+                "margin-bottom": "4px"
+            })
 
             const proposedContainer = item.createDiv({ cls: "header-proposed-container" })
-            proposedContainer.style.display = "flex"
-            proposedContainer.style.alignItems = "center"
-            proposedContainer.style.gap = "8px"
+            proposedContainer.setCssProps({
+                "display": "flex",
+                "align-items": "center",
+                "gap": "8px"
+            })
 
             const label = proposedContainer.createSpan({ text: "File Name:" })
-            label.style.fontWeight = "bold"
-            label.style.whiteSpace = "nowrap"
+            label.setCssProps({
+                "font-weight": "bold",
+                "white-space": "nowrap"
+            })
 
             if (this.editable) {
                 const input = proposedContainer.createEl("input", {
                     type: "text",
                     value: proposed,
                 })
-                input.style.width = "100%"
+                input.setCssProps({ "width": "100%" })
 
                 input.addEventListener("input", (e) => {
                     this.proposedHeaders[index] = (e.target as HTMLInputElement).value
                 })
             } else {
                 const span = proposedContainer.createSpan({ text: proposed })
-                span.style.color = "var(--text-accent)"
+                span.setCssProps({ "color": "var(--text-accent)" })
             }
         })
     }
 
     onOpen() {
         const { contentEl, titleEl } = this
-        titleEl.setText("Verify Proposed Names")
+        titleEl.setText("Verify proposed names")
 
         new Setting(contentEl)
-            .setName("Auto Increment")
-            .setDesc("Add 001, 002... prefix to filenames")
+            .setName("Auto increment")
+            .setDesc("Add numeric prefixes to filenames.")
             .addToggle(toggle => toggle
                 .setValue(this.autoIncrement)
                 .onChange(value => {
@@ -212,7 +220,7 @@ export class HeadersModal extends Modal {
                 }))
 
         new Setting(contentEl)
-            .setName("Edit Names")
+            .setName("Edit names")
             .setDesc("Toggle between editable inputs and plain text")
             .addToggle(toggle => toggle
                 .setValue(this.editable)
@@ -230,7 +238,7 @@ export class HeadersModal extends Modal {
 
         const confirm = div.createEl("button", {
             cls: "mod-cta",
-            text: "Confirm & Subdivide",
+            text: "Confirm & subdivide",
         })
         confirm.addEventListener("click", () => {
             if (this.resolve) this.resolve(this.proposedHeaders)

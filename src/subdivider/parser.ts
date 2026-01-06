@@ -1,5 +1,6 @@
 import { fromMarkdown, Options as FromMdOptions } from 'mdast-util-from-markdown'
 import { toMarkdown, Options as ToMdOptions } from 'mdast-util-to-markdown'
+import { Nodes, Text } from 'mdast'
 
 import { frontmatter } from 'micromark-extension-frontmatter'
 import { frontmatterFromMarkdown, frontmatterToMarkdown } from 'mdast-util-frontmatter'
@@ -12,15 +13,11 @@ const FromMarkdownOptions: FromMdOptions = {
     mdastExtensions: [frontmatterFromMarkdown(['yaml', 'toml']), gfmFromMarkdown()]
 }
 
-/* eslint-disable  @typescript-eslint/no-explicit-any */
-function textHandler(node: any, _: any, context: any) {
-    const exit = context.enter('text')
-    exit()
+function textHandler(node: Text) {
     return node.value
 }
 
-/* eslint-disable  @typescript-eslint/no-explicit-any */
-function customJoin(left: any, right: any, parent: any, state: any) {
+function customJoin() {
     return 0
 }
 
@@ -35,7 +32,7 @@ function fromMd(input: string) {
     return fromMarkdown(input, FromMarkdownOptions)
 }
 
-function toMd(input: any, compact: boolean = false) {
+function toMd(input: Nodes, compact: boolean = false) {
     if (compact) {
         ToMarkdownOptions.join = [customJoin]
     }

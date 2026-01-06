@@ -1,32 +1,16 @@
 
 import {
-    type App, TFile, normalizePath
+    type App, TFile, normalizePath, Platform
 } from 'obsidian'
 import { type Root, type PhrasingContent, List } from 'mdast'
 import IdeaEmergencePlugin from '../main'
 import { fromMd, toMd } from "./parser"
 import { FilenameModal, OverrideModal, HeadersModal } from "./modal"
 
-function hostname() {
-    const platform = window.navigator.platform;
-    const macosPlatforms = ['Macintosh', 'MacIntel', 'MacPPC', 'Mac68K'];
-    const windowsPlatforms = ['Win32', 'Win64', 'Windows', 'WinCE'];
-    let os = null;
-    if (macosPlatforms.indexOf(platform) !== -1) {
-        os = 'macOS';
-    } else if (windowsPlatforms.indexOf(platform) !== -1) {
-        os = 'Windows';
-    } else if (!os && /Linux/.test(platform)) {
-        os = 'Linux';
-    }
-    return os;
-}
-
-
 export function handleTitle(title: string): string {
     // remove / and \\ for every platform
     const cleanTitle = title.replace(/[/\\]/g, "_")
-    if (hostname() === 'Windows' && (title.endsWith(".") || title.endsWith(" "))) {
+    if (Platform.isWin && (title.endsWith(".") || title.endsWith(" "))) {
         return cleanTitle + "_"
     }
     return cleanTitle
@@ -186,7 +170,7 @@ async function handle_file(plugin: IdeaEmergencePlugin, file: TFile, depth: numb
     const rootPath = `${file.parent?.path}/${file.basename}`
     await subdivide(plugin.app, rootPath, documents, autoOverride, plugin.settings.compact)
     if (deleteOrigFile) {
-        await plugin.app.vault.delete(file)
+        await plugin.app.fileManager.trashFile(file)
     }
     if (plugin.settings.recursive && depth < plugin.settings.recursionDepth) {
         const folder = plugin.app.vault.getFolderByPath(normalizePath(rootPath));
@@ -210,7 +194,10 @@ async function handle_selection(plugin: IdeaEmergencePlugin, selectedText: strin
     if (plugin.settings.delete) {
         plugin.app.workspace.activeEditor?.editor?.replaceSelection("")
     }
-    handle_file(plugin, plugin.app.vault.getAbstractFileByPath(normalizePath(`${rootPath}/${title}.md`)) as TFile, 1, true, false, false)
+    const file = plugin.app.vault.getAbstractFileByPath(normalizePath(`${rootPath}/${title}.md`))
+    if (file instanceof TFile) {
+        void handle_file(plugin, file, 1, true, false, false)
+    }
 }
 
 export { handle_selection, handle_file }

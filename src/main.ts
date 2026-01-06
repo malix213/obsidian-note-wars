@@ -8,7 +8,7 @@ import { platform } from 'os';
 import * as crypto from 'crypto';
 import { SubdividerSettingTab, DEFAULT_SETTINGS as DEFAULT_SUBDIVIDER_SETTINGS, type SubdividerSettings } from './subdivider/settings';
 import { handle_selection, handle_file } from './subdivider/handles';
-import { Menu, MenuItem, TFile } from 'obsidian';
+import { TFile } from 'obsidian';
 
 interface ExtendedApp extends App {
     commands: {
@@ -26,8 +26,7 @@ interface ObsidianConfig {
     vaults: Record<string, VaultEntry>;
 }
 
-interface IdeaEmergenceSettings extends SubdividerSettings {
-}
+type IdeaEmergenceSettings = SubdividerSettings;
 
 const DEFAULT_SETTINGS: IdeaEmergenceSettings = {
     ...DEFAULT_SUBDIVIDER_SETTINGS
@@ -129,7 +128,7 @@ export default class IdeaEmergencePlugin extends Plugin {
     }
 
     async loadSettings() {
-        this.settings = Object.assign({}, DEFAULT_SETTINGS, await this.loadData());
+        this.settings = Object.assign({}, DEFAULT_SETTINGS, await this.loadData() as Partial<IdeaEmergenceSettings>);
     }
 
     async saveSettings() {

@@ -39,18 +39,18 @@ class SubdividerSettingTab extends PluginSettingTab {
             .setDesc('Turn all subheadings to folders recursively.')
             .addToggle(toggle => toggle
                 .setValue(this.plugin.settings.recursive)
-                .onChange(async value => {
+                .onChange(async (value: boolean) => {
                     this.plugin.settings.recursive = value
                     await this.plugin.saveSettings()
                 })
             )
 
         new Setting(containerEl)
-            .setName("Recursion Depth")
+            .setName("Recursion depth")
             .setDesc("The maximum depth of recursion.")
             .addText(text => text
                 .setValue(this.plugin.settings.recursionDepth.toString())
-                .onChange(async value => {
+                .onChange(async (value: string) => {
                     this.plugin.settings.recursionDepth = Number(value)
                     await this.plugin.saveSettings()
                 })
@@ -61,7 +61,7 @@ class SubdividerSettingTab extends PluginSettingTab {
             .setDesc('Delete original file or selection after subdivision.')
             .addToggle(toggle => toggle
                 .setValue(this.plugin.settings.delete)
-                .onChange(async value => {
+                .onChange(async (value: boolean) => {
                     this.plugin.settings.delete = value
                     await this.plugin.saveSettings()
                 })
@@ -72,7 +72,7 @@ class SubdividerSettingTab extends PluginSettingTab {
             .setDesc('Create index file for folders after subdivision.')
             .addToggle(toggle => toggle
                 .setValue(this.plugin.settings.index)
-                .onChange(async value => {
+                .onChange(async (value: boolean) => {
                     this.plugin.settings.index = value
                     await this.plugin.saveSettings()
                 })
@@ -83,18 +83,18 @@ class SubdividerSettingTab extends PluginSettingTab {
             .setDesc('If enabled, no new line breaks will be added between blocks.')
             .addToggle(toggle => toggle
                 .setValue(this.plugin.settings.compact)
-                .onChange(async value => {
+                .onChange(async (value: boolean) => {
                     this.plugin.settings.compact = value
                     await this.plugin.saveSettings()
                 })
             )
 
         new Setting(containerEl)
-            .setName('Auto Increment')
-            .setDesc('Default state for Auto Increment in the subdivision modal.')
+            .setName('Auto increment')
+            .setDesc('Default state for auto increment in the subdivision modal.')
             .addToggle(toggle => toggle
                 .setValue(this.plugin.settings.autoIncrement)
-                .onChange(async value => {
+                .onChange(async (value: boolean) => {
                     this.plugin.settings.autoIncrement = value
                     await this.plugin.saveSettings()
                 })
