@@ -9,6 +9,7 @@ import * as crypto from 'crypto';
 import { SubdividerSettingTab, DEFAULT_SETTINGS as DEFAULT_SUBDIVIDER_SETTINGS, type SubdividerSettings } from './subdivider/settings';
 import { handle_selection, handle_file } from './subdivider/handles';
 import { TFile } from 'obsidian';
+import { addAutoIncrementMenuItems } from './autoincrement-note';
 
 interface ExtendedApp extends App {
     commands: {
@@ -95,6 +96,8 @@ export default class IdeaEmergencePlugin extends Plugin {
         // Register event for context menu
         this.registerEvent(
             this.app.workspace.on("file-menu", (menu, file) => {
+                addAutoIncrementMenuItems(this.app, menu, file);
+
                 if (file instanceof TFolder) {
                     menu.addItem((item) => {
                         item
