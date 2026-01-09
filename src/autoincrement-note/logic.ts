@@ -1,4 +1,4 @@
-import { Modal, App, Setting, TAbstractFile, TFolder, FileSystemAdapter, Notice } from 'obsidian';
+import { Modal, App, Setting, TAbstractFile, TFolder, Notice } from 'obsidian';
 import * as path from 'path';
 
 export interface AutoIncrementChoice {
@@ -7,11 +7,11 @@ export interface AutoIncrementChoice {
 }
 
 export class GapDetectionModal extends Modal {
-    onChoice: (choice: AutoIncrementChoice) => void;
+    onChoice: (choice: AutoIncrementChoice) => void | Promise<void>;
     gaps: number[];
     nextNumber: number;
 
-    constructor(app: App, gaps: number[], nextNumber: number, onChoice: (choice: AutoIncrementChoice) => void) {
+    constructor(app: App, gaps: number[], nextNumber: number, onChoice: (choice: AutoIncrementChoice) => void | Promise<void>) {
         super(app);
         this.gaps = gaps;
         this.nextNumber = nextNumber;
@@ -20,7 +20,7 @@ export class GapDetectionModal extends Modal {
 
     onOpen() {
         const { contentEl } = this;
-        contentEl.createEl("h2", { text: "Gaps Detected in Numbering" });
+        contentEl.createEl("h2", { text: "Gaps detected in numbering" });
         contentEl.createEl("p", { text: `Found missing numbers: ${this.gaps.join(', ')}` });
         contentEl.createEl("p", { text: `Next sequential number: ${this.nextNumber}` });
 
@@ -36,26 +36,26 @@ export class GapDetectionModal extends Modal {
             .addButton(btn => btn
                 .setButtonText("Cancel")
                 .onClick(() => {
-                    this.onChoice({ action: 'cancel' });
+                    void this.onChoice({ action: 'cancel' });
                     this.close();
                 }))
             .addButton(btn => btn
-                .setButtonText("Reincrement All")
+                .setButtonText("Reincrement all")
                 .onClick(() => {
-                    this.onChoice({ action: 'reincrement_all' });
+                    void this.onChoice({ action: 'reincrement_all' });
                     this.close();
                 }))
             .addButton(btn => btn
                 .setButtonText(`Fill Gap (${this.gaps[0]})`)
                 .onClick(() => {
-                    this.onChoice({ action: 'fill_gap', gapNumber: this.gaps[0] });
+                    void this.onChoice({ action: 'fill_gap', gapNumber: this.gaps[0] });
                     this.close();
                 }))
             .addButton(btn => btn
                 .setButtonText(`Append (${this.nextNumber})`)
                 .setCta()
                 .onClick(() => {
-                    this.onChoice({ action: 'append' });
+                    void this.onChoice({ action: 'append' });
                     this.close();
                 }));
     }
