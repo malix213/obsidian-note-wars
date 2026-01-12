@@ -1,3 +1,3 @@
 - [] recheck if vault is registed in vault management obsidian.json
 - [] Vault of directory analyses
-- [] add remove autoincrement in name of note 
+- [X] add remove autoincrement in name of note 

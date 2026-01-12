@@ -6,3 +6,103 @@ available in the app when your plugin is enabled.
 If your plugin does not need CSS, delete this file.
 
 */
+
+/* Timestamp Scanner Styles */
+
+.timestamp-count-header {
+    padding: 8px 12px;
+    margin-bottom: 8px;
+    background-color: var(--background-primary-alt);
+    border-radius: 4px;
+    border-left: 3px solid var(--interactive-accent);
+}
+
+.timestamp-count-text {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text-normal);
+}
+
+.timestamp-cards-container {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding: 8px;
+}
+
+.timestamp-card {
+    background-color: var(--background-secondary);
+    border: 1px solid var(--background-modifier-border);
+    border-radius: 6px;
+    padding: 10px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.timestamp-card:hover {
+    background-color: var(--background-secondary-alt);
+    border-color: var(--interactive-accent);
+    transform: translateX(2px);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.timestamp-card-header {
+    display: flex;
+    gap: 6px;
+    margin-bottom: 8px;
+    flex-wrap: wrap;
+}
+
+.timestamp-badge {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 11px;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.timestamp-badge-slot {
+    background-color: var(--interactive-accent);
+    color: var(--text-on-accent);
+}
+
+.timestamp-badge-time {
+    background-color: #8b5cf6;
+    color: white;
+}
+
+.timestamp-badge-line {
+    background-color: var(--background-modifier-border);
+    color: var(--text-muted);
+    margin-left: auto;
+}
+
+.timestamp-card-time {
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--text-normal);
+    margin-bottom: 6px;
+    font-family: var(--font-monospace);
+}
+
+.timestamp-card-preview {
+    font-size: 13px;
+    color: var(--text-muted);
+    line-height: 1.4;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.timestamp-card-clickable {
+    user-select: none;
+}
+
+/* Empty state */
+.timestamp-cards-container p {
+    text-align: center;
+    color: var(--text-muted);
+    padding: 20px;
+}
