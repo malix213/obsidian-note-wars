@@ -844,7 +844,7 @@ export default class IdeaEmergencePlugin extends Plugin {
 			if (leaf) {
 				void this.app.workspace.revealLeaf(leaf);
 				const view = leaf.view as TimestampView;
-				await view.setTimestamps(timestamps, file);
+				view.setTimestamps(timestamps, file);
 				new Notice(`Found ${timestamps.length} timestamp(s)`);
 			}
 		} catch (error) {

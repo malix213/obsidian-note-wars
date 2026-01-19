@@ -26,6 +26,7 @@ export class TimestampView extends ItemView {
 	}
 
 	async onOpen() {
+		await super.onOpen();
 		const contentEl = this.contentEl;
 		contentEl.empty();
 		contentEl.createEl("h2", { text: "Timestamps found" });
@@ -43,13 +44,13 @@ export class TimestampView extends ItemView {
 	 * @param timestamps - An array of TimestampMatch objects.
 	 * @param file - The TFile associated with the timestamps.
 	 */
-	async setTimestamps(timestamps: TimestampMatch[], file: TFile) {
+	public setTimestamps(timestamps: TimestampMatch[], file: TFile) {
 		this.timestamps = timestamps;
 		this.file = file;
-		await this.renderTimestamps();
+		this.renderTimestamps();
 	}
 
-	private async renderTimestamps() {
+	private renderTimestamps() {
 		const container = this.contentEl.querySelector("#timestamp-list-container") as HTMLElement;
 		if (!container) {
 			console.error("Timestamp list container not found.");

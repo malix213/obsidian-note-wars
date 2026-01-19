@@ -24,6 +24,7 @@ export class TimestampScannerView extends ItemView {
     }
 
     async onOpen() {
+        await super.onOpen();
         this.render();
     }
 
